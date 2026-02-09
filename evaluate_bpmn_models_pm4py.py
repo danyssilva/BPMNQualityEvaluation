@@ -112,6 +112,72 @@ def plot_execution_times(global_execution_times, folder_solution_counts):
     plt.tight_layout()
     plt.show()
 
+def plot_solutions_curves(global_results, folder_solution_counts, output_path=None):
+    """
+    Plots a single comparison figure with all folders' solution curves.
+    Each metric is shown in its own subplot.
+    X-axis is solution index (quantity only), and legend shows solution count.
+    """
+    metrics = ['Recall', 'Precision', 'Generalization', 'Simplicity']
+
+    # Sort folders by solution count
+    sorted_folders = sorted(folder_solution_counts.items(), key=lambda x: x[1])
+    folder_names = [name for name, _ in sorted_folders]
+
+    # Color palette per folder
+    colors = plt.cm.tab20(range(len(folder_names)))
+    markers = ['o', 's', '^', 'D', 'v', 'P', 'X', '*', 'h', '>']
+    linestyles = ['-', '--', '-.', ':']
+
+    max_solutions = max(folder_solution_counts.values()) if folder_solution_counts else 0
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+
+    for idx, metric in enumerate(metrics):
+        ax = axes[idx // 2, idx % 2]
+
+        n_folders = max(len(folder_names), 1)
+        offset_step = 0.06
+
+        for folder_idx, folder_name in enumerate(folder_names):
+            results = global_results[folder_name]
+            if not results:
+                continue
+
+            values = [result[metric.lower()] for result in results]
+            x_pos = range(1, len(values) + 1)
+            solution_count = folder_solution_counts.get(folder_name, len(values))
+            offset = (folder_idx - (n_folders - 1) / 2) * offset_step
+            x_pos_offset = [x + offset for x in x_pos]
+
+            ax.plot(
+                x_pos_offset,
+                values,
+                marker=markers[folder_idx % len(markers)],
+                linestyle=linestyles[folder_idx % len(linestyles)],
+                linewidth=2,
+                markersize=5,
+                color=colors[folder_idx],
+                alpha=0.8,
+                label=f"{folder_name} ({solution_count})"
+            )
+
+        ax.set_title(f'{metric}', fontsize=12, fontweight='bold')
+        ax.set_xlabel('Solution Count', fontsize=10)
+        ax.set_ylabel('Metric Value', fontsize=10)
+        if max_solutions > 0:
+            ax.set_xticks(range(1, max_solutions + 1))
+            ax.set_xlim(0.6, max_solutions + 0.4)
+        ax.set_ylim(0, 1.1)
+        ax.grid(True, linestyle='--', alpha=0.7)
+        ax.legend(title='Process', fontsize=7, loc='best')
+
+    plt.tight_layout()
+    plt.suptitle('Metrics Comparison per Process', y=1.00, fontsize=14, fontweight='bold')
+    if output_path:
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.show()
+
+
 def display_solution_counts_table(folder_solution_counts):
     """Displays a table showing the count of solutions per folder."""
     folder_indices = list(range(1, len(folder_solution_counts) + 1))
@@ -235,6 +301,7 @@ def main():
 
     if global_results:
         plot_box_plots(global_results, folder_solution_counts)
+        plot_solutions_curves(global_results, folder_solution_counts)
     if global_execution_times:
         plot_execution_times(global_execution_times, folder_solution_counts)
 
